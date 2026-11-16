@@ -9,9 +9,13 @@ Nothing is ever changed on eBay or Shopify: the tools only read.
 
 ## Quick start
 
+A prebuilt program isn't included right now; build one from source (see [Building the app](#building-the-app))
+or run the script with Python.
+
 1. Create `config.yaml` with your eBay and Shopify credentials (see [Configuration](#configuration-configyaml))
    and put it next to the program or in `~/Downloads`.
-2. Run `CCU eBay Reports.exe` (Windows), the Mac program you built, or `python3 ccu_ebay_app.py`.
+2. Run `python3 ccu_ebay_app.py`, or the program you built (`CCU eBay Reports.exe` on Windows,
+   `CCU eBay Reports` on Mac; see [Building the app](#building-the-app)).
 3. Press Enter to accept the `config.yaml` it found, then pick the eBay account if asked.
 4. The requested-fields CSV opens when done. It is saved in `ccu_report_output/`.
 
@@ -26,7 +30,6 @@ For the full report, audit and Excel workbook, run `python3 ccu_ebay_report.py` 
 | `ccu_ebay_report.py` | Full listing report and buyer-block audit (CSVs, Excel workbook, change tracking). Also the shared eBay/Shopify connection code used by the other two scripts. |
 | `Build Mac eBay App.command` | Builds the Mac program from the three `.py` files. |
 | `CCU eBay Reports - Mac build kit.zip` | The same three scripts plus the build script, zipped for copying to a Mac. |
-| `CCU eBay Reports.exe` | Prebuilt Windows program (requested-fields report). |
 
 ## Features
 
@@ -56,10 +59,9 @@ For the full report, audit and Excel workbook, run `python3 ccu_ebay_report.py` 
 
 ## Requirements
 
-- Prebuilt program: nothing to install.
-  - Windows: `CCU eBay Reports.exe`.
-  - Mac: build it yourself with `Build Mac eBay App.command` (see below). The Mac program only runs on
-    Macs with the same chip type (Apple silicon or Intel) as the Mac that built it.
+- Built program: nothing to install to run it. Build it yourself (see [Building the app](#building-the-app)).
+  The Mac program only runs on Macs with the same chip type (Apple silicon or Intel) as the Mac that
+  built it.
 - Windows or macOS. On Linux the scripts run from source; the finished CSV is opened with `xdg-open`.
 - From source: Python 3.10 or newer. Only the standard library is used (`tkinter`, for the file picker in
   `ccu_ebay_app.py`, is optional; without it you type the path). On a Mac with Python from
@@ -70,9 +72,9 @@ For the full report, audit and Excel workbook, run `python3 ccu_ebay_report.py` 
 
 ## How to run
 
-### Prebuilt program
+### Built program
 
-1. Put `config.yaml` next to the program (or in your Downloads or Documents folder).
+1. Build the program (see [Building the app](#building-the-app)), then put `config.yaml` next to it (or in your Downloads or Documents folder).
 2. Double-click `CCU eBay Reports.exe` (Windows) or `CCU eBay Reports` (Mac, opens in Terminal).
    On a Mac that did not build it, the first time: right-click it > Open > Open (it is not signed).
 3. It shows which `config.yaml` it will use. Press Enter to use it, or type `C` and Enter to choose a
@@ -82,7 +84,7 @@ For the full report, audit and Excel workbook, run `python3 ccu_ebay_report.py` 
 
 ### From source
 
-Requested-fields CSV (same as the prebuilt program):
+Requested-fields CSV (same as the built program):
 
 ```
 py ccu_ebay_app.py                 # Windows
@@ -259,8 +261,7 @@ It takes 1 to 2 minutes. `config.yaml` is not included in the build.
 
 ### Windows
 
-The repo ships a prebuilt `CCU eBay Reports.exe`. The Windows build script referenced in the source
-(`Build Windows eBay App.bat`) is not in this repo. An equivalent manual build:
+The Windows build script referenced in the source (`Build Windows eBay App.bat`) is not in this repo. An equivalent manual build:
 
 ```
 py -m pip install pyinstaller
