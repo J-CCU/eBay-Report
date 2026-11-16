@@ -2,9 +2,20 @@
 
 Read-only reporting tools for an eBay seller account. They pull every active listing through the eBay
 Trading API, match each one to the Shopify store's products, and write CSV / Excel reports of listing
-fields, price rules and problems that can stop a buyer checking out.
+fields, price rules and problems that can stop a buyer checking out. They are meant for staff who manage
+eBay listings that are synced from a Shopify store.
 
 Nothing is ever changed on eBay or Shopify: the tools only read.
+
+## Quick start
+
+1. Create `config.yaml` with your eBay and Shopify credentials (see [Configuration](#configuration-configyaml))
+   and put it next to the program or in `~/Downloads`.
+2. Run `CCU eBay Reports.exe` (Windows), the Mac program you built, or `python3 ccu_ebay_app.py`.
+3. Press Enter to accept the `config.yaml` it found, then pick the eBay account if asked.
+4. The requested-fields CSV opens when done. It is saved in `ccu_report_output/`.
+
+For the full report, audit and Excel workbook, run `python3 ccu_ebay_report.py` instead.
 
 ## What is in this repo
 
@@ -23,13 +34,15 @@ Nothing is ever changed on eBay or Shopify: the tools only read.
   (one per variation for multi-variation listings) with listing title, shipping, price rule, item
   specifics and condition fields.
 - **Full report and audit** (`ccu_ebay_report.py`):
-  - every active listing, with Shopify price, vendor, quantity and how it was matched (SKU or title)
+  - every active listing, with Shopify price, vendor, quantity and how it was matched (exact SKU first; otherwise
+    the normalized title, at least 15 characters, preferring active Shopify products)
   - price-rule detection: "Web price" (eBay = Shopify), "% increase 5" (eBay = Shopify + 5%, or a product
     tagged `consignment`), otherwise flagged as a mismatch
-  - audit of problems that can block checkout: zero stock, empty variations, calculated shipping with no
-    weight or dimensions, missing SKU, no Shopify match, price or quantity mismatch, wrong condition for a
-    trading-card category, graded cards missing grader / grade / cert number, conflicting item specifics,
-    card-like titles in non-card categories
+  - audit of problems that can block checkout: zero stock, empty variations, condition used as a variation
+    in a card category, calculated shipping with no weight or dimensions (or over 15 lb), missing SKU, no
+    Shopify match, price or quantity mismatch, wrong condition for a trading-card category, graded cards
+    missing grader / grade / cert number, ungraded cards missing Card Condition, slab-like titles listed as
+    Ungraded, conflicting item specifics, card-like titles in non-card categories
   - change comparison against the previous run for the same account
   - Excel workbook with All Fields, Requested Fields, Problems and Changes sheets (written with the
     standard library, no Excel needed to create it)
@@ -44,11 +57,14 @@ Nothing is ever changed on eBay or Shopify: the tools only read.
   - Windows: `CCU eBay Reports.exe`.
   - Mac: build it yourself with `Build Mac eBay App.command` (see below). The Mac program only runs on
     Macs with the same chip type (Apple silicon or Intel) as the Mac that built it.
-- From source: Python 3.10 or newer. Only the standard library is used. On a Mac with Python from
+- Windows or macOS. On Linux the scripts run from source, but `ccu_ebay_app.py` cannot open the finished
+  CSV (see [Troubleshooting](#troubleshooting)).
+- From source: Python 3.10 or newer. Only the standard library is used (`tkinter`, for the file picker in
+  `ccu_ebay_app.py`, is optional; without it you type the path). On a Mac with Python from
   python.org, install `certifi` (`python3 -m pip install certifi`) or run Python's
   "Install Certificates.command"; otherwise HTTPS connections may fail certificate checks.
 - Internet access to `api.ebay.com` and the Shopify store's `*.myshopify.com` domain.
-- A `config.yaml` with eBay and Shopify credentials (see Configuration).
+- A `config.yaml` with eBay and Shopify credentials (see [Configuration](#configuration-configyaml)).
 
 ## How to run
 
@@ -99,7 +115,11 @@ python3 ccu_ebay_report.py [--account NAME] [--config PATH] [--limit N] [--refre
 ## Configuration: config.yaml
 
 The tools read a `config.yaml` that has an `ebay:` section and a `shopify:` section. A small built-in
-YAML reader is used (no PyYAML needed): nested keys with two-space indentation and `"quoted"` values.
+YAML reader is used (no PyYAML needed), so keep to this format:
+
+- `ebay:` and `shopify:` start at the beginning of the line; nested keys are indented (two spaces).
+- Wrap values in double quotes. Single quotes are not removed and become part of the value.
+- A ` #` (space, then `#`) starts a comment, so a value must not contain one.
 
 ### Where config.yaml is looked for
 
@@ -163,7 +183,7 @@ The tokens need read access to the seller's listings (Trading API `GetUser`, `Ge
 | Key | Purpose |
 | --- | --- |
 | `store_url` | The store's `*.myshopify.com` domain. |
-| `admin_api_token` | Admin API access token with permission to read products. Used directly if present. |
+| `admin_api_token` | Admin API access token with permission to read products (variant `inventoryQuantity` may also need inventory read access). Used directly if present. |
 | `client_id`, `client_secret` | Used if there is no `admin_api_token`: exchanged for an access token via the client-credentials grant. |
 
 The `shopify:` section is required, except for `ccu_ebay_report.py --no-shopify`.
@@ -207,13 +227,13 @@ With `--with-id`, `Item Number` is added first.
 | File | Contents |
 | --- | --- |
 | `requested_fields_<account>_<stamp>.csv` | Item Number, Title, Variation, then the requested fields; repeated names are labelled with their section, e.g. `Grade (Item Specifics)`, `Grade (Condition)`. |
-| `ebay_report_<account>_<stamp>.csv` | Requested fields plus working columns: SKU, Category, Available Qty, eBay Price, Package Weight (oz), Package Size (in), Rounding, Category ID, Price Rule Basis, Shopify Price / Vendor / Qty / Match, Issues, Changed Since Last Run. |
+| `ebay_report_<account>_<stamp>.csv` | Requested fields plus working columns: SKU, Category, Available Qty, eBay Price, Package Weight (oz), Package Size (in), Rounding, Category ID, Price Rule Basis, Shopify Price / Vendor / Qty / Match, Issues (number of audit problems for the listing), Changed Since Last Run. Repeated field names carry a prefix here: `IS: Grade` (item specific) and `Condition: Grade` (condition descriptor). |
 | `audit_<account>_<stamp>.csv` | One row per problem: Severity (High / Medium / Low), Item Number, Title, Issue, Suggested fix. Sorted by severity. |
 | `changes_<account>_<stamp>.csv` | Key (item / SKU / variation), Field, Old, New, compared with the latest previous snapshot for that account. |
 | `snapshot_<account>_<stamp>.json` | Values used for the next change comparison (not written with `--limit`). |
 | `errors_<account>_<stamp>.log` | eBay API errors and warnings, if any. |
 | `eBay_Listings_Report_<account>_<stamp>.xlsx` | Sheets: All Fields (every field eBay returns per listing, including item specifics, photos, variations, description text, listing URL), Requested Fields (grouped headings), Problems, Changes. |
-| `shopify_cache.json` | Cached Shopify products (reused for 12 hours). |
+| `shopify_cache.json` | Cached Shopify products (reused for 12 hours). Shared by all accounts and not tied to a store, so use `--refresh-shopify` after switching to a config with a different store. |
 
 The console also prints counts and the top 10 issue types.
 
@@ -254,13 +274,14 @@ The program appears in `dist\`.
 | `No eBay accounts in this config.yaml` | Add tokens under `ebay:` (default account) or under `seller_accounts`. |
 | `eBay: no account '<name>' in config.yaml` | `--account` value is not one of the configured accounts. |
 | `eBay: OAuth refresh failed ...; falling back to user_token` | The refresh token or app/cert IDs are wrong or expired. It continues with `user_token` if present. |
-| `eBay: no usable token for '<name>'` | Neither token works for that account. Reconnect the account to get a new token. |
+| `eBay: no usable token for '<name>'` | Neither token works for that account. Get a new token for that eBay user and put it in `config.yaml`. (The `Connect eBay Account.bat` named in this message is not in this repo.) |
 | `the token for '<name>' signs in as '<x>', not '<y>'` | The token belongs to another eBay user. Fix the token or set `ebay_user_id`. |
 | `HTTP 401/403` from Shopify, or `Shopify query error` | Check `store_url` and the Shopify token / client credentials, and that the app can read products. |
 | SSL / certificate errors on a Mac | Install `certifi`, or run "Install Certificates.command" from the Python folder in Applications. The built Mac program bundles certifi. |
 | Mac says the program cannot be opened | Right-click > Open > Open the first time (it is not signed). |
 | Mac program will not start on another Mac | It was built for a different chip type. Rebuild on that Mac. |
 | Shopify data looks out of date | Run with `--refresh-shopify` (cache lasts 12 hours). |
+| `ccu_ebay_app.py` on Linux shows "Something went wrong" with `AttributeError: ... 'startfile'` | The report was written; only opening it failed. Open the CSV from `ccu_report_output/` yourself. |
 | `Listings that could not be read: N` | Those `GetItem` calls failed; see the console (or `errors_*.log` for the full report). |
 
 If the packaged program shows "Something went wrong", copy the error text (never a token or password)
