@@ -35,15 +35,18 @@ For the full report, audit and Excel workbook, run `python3 ccu_ebay_report.py` 
   specifics and condition fields.
 - **Full report and audit** (`ccu_ebay_report.py`):
   - every active listing, with Shopify price, vendor, quantity and how it was matched (exact SKU first; otherwise
-    the normalized title, at least 15 characters, preferring active Shopify products)
-  - price-rule detection: "Web price" (eBay = Shopify), "% increase 5" (eBay = Shopify + 5%, or a product
-    tagged `consignment`), otherwise flagged as a mismatch
+    the full normalized title, at least 15 characters, preferring active Shopify products; if several different
+    Shopify products share that title the match is shown as `title (ambiguous: N products)` and flagged in the
+    audit for review instead of being guessed)
+  - price-rule detection: "Web price" (eBay = Shopify), "% increase 5" (eBay = Shopify + 5%), otherwise flagged
+    as a mismatch; a product tagged `consignment` must be priced at Shopify + 5% or it is flagged as a mismatch
   - audit of problems that can block checkout: zero stock, empty variations, condition used as a variation
     in a card category, calculated shipping with no weight or dimensions (or over 15 lb), missing SKU, no
     Shopify match, price or quantity mismatch, wrong condition for a trading-card category, graded cards
     missing grader / grade / cert number, ungraded cards missing Card Condition, slab-like titles listed as
     Ungraded, conflicting item specifics, card-like titles in non-card categories
-  - change comparison against the previous run for the same account
+  - change comparison against the previous run for the same account (the shipping policy name shown after
+    "Shipping Cost type" is ignored, because eBay only returns it some of the time)
   - Excel workbook with All Fields, Requested Fields, Problems and Changes sheets (written with the
     standard library, no Excel needed to create it)
 - Multiple eBay seller accounts in one `config.yaml`, with a numbered menu to choose one.
@@ -206,7 +209,7 @@ No environment variables are used.
 
 All files go to a `ccu_report_output` folder in the program folder. For the packaged program, if its
 folder cannot be written to, `~/Downloads` is used instead. `<account>` is the account name, `<stamp>` is
-`YYYY-MM-DD_HHMM`. CSVs are UTF-8 with BOM so Excel opens them correctly.
+`YYYY-MM-DD_HHMMSS` (older runs used `YYYY-MM-DD_HHMM`; their snapshots are still read). CSVs are UTF-8 with BOM so Excel opens them correctly.
 
 ### requested_fields_report.py / the packaged program
 

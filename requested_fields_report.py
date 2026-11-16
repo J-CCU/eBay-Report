@@ -109,7 +109,7 @@ def main(argv=None):
     header = [name for name, _ in REQUESTED]
     if a.with_id:
         header = ["Item Number"] + header
-    stamp = dt.datetime.now().strftime("%Y-%m-%d_%H%M")
+    stamp = dt.datetime.now().strftime("%Y-%m-%d_%H%M%S")
     path = os.path.join(core.OUT, f"requested_fields_{a.account}_{stamp}.csv")
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)

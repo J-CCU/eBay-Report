@@ -525,7 +525,7 @@ def shopify_products(cfg, refresh):
         p = d["data"]["products"]
         for n in p["nodes"]:
             for v in n["variants"]["nodes"]:
-                rows.append({"title": n["title"], "vendor": n["vendor"], "tags": n["tags"], "status": n["status"],
+                rows.append({"product_id": n["id"], "title": n["title"], "vendor": n["vendor"], "tags": n["tags"], "status": n["status"],
                              "sku": (v["sku"] or "").strip(), "price": float(v["price"] or 0),
                              "qty": v.get("inventoryQuantity")})
         print(f"  Shopify: {len(rows)} variants...", end="\r")
@@ -538,7 +538,7 @@ def shopify_products(cfg, refresh):
 
 
 def norm(s):
-    return re.sub(r"[^a-z0-9]", "", (s or "").lower())[:50]
+    return re.sub(r"[^a-z0-9]", "", (s or "").lower())
 
 
 class ShopifyIndex:
@@ -556,6 +556,9 @@ class ShopifyIndex:
         active = [c for c in cands if c["status"] == "ACTIVE"] or cands
         if not active:
             return None, "not found"
+        products = {c.get("product_id") or (c["title"], c["vendor"], tuple(c["tags"]), c["status"]) for c in active}
+        if len(products) > 1:                       # different products share the title: don't guess by price
+            return None, f"title (ambiguous: {len(products)} products)"
         if ebay_price:
             def score(c):
                 if not c["price"]:
@@ -573,7 +576,10 @@ def price_rule(ebay_price, shop):
     sp, r = shop["price"], ebay_price / shop["price"]
     tags = [x.lower() for x in shop["tags"]]
     if "consignment" in tags:
-        return "% increase", "5", "None", f"{sp * (1 + CONSIGNMENT_MARKUP):.2f}", "consignment tag"
+        if abs(r - 1 - CONSIGNMENT_MARKUP) < PRICE_TOL:
+            return "% increase", "5", "None", f"{sp * (1 + CONSIGNMENT_MARKUP):.2f}", "consignment tag"
+        return "% increase", "5", "None", f"{sp * (1 + CONSIGNMENT_MARKUP):.2f}", \
+            f"MISMATCH: eBay {ebay_price:.2f} vs Shopify {sp:.2f} (x{r:.3f}); consignment tag expects +5%"
     if abs(r - 1) < PRICE_TOL:
         return "Web price", "", "None", f"{sp:.2f}", "inferred: eBay = Shopify"
     if abs(r - 1 - CONSIGNMENT_MARKUP) < PRICE_TOL:
@@ -619,6 +625,9 @@ def audit(d, rows):
     for r in rows:
         if r["Shopify Match"] == "not found":
             add("Medium", f"No matching Shopify product (SKU '{r['SKU']}')", "Link the listing to its Shopify product")
+        if r["Shopify Match"].startswith("title (ambiguous"):
+            add("Medium", f"Shopify match is {r['Shopify Match']}; price/qty not checked (SKU '{r['SKU']}')",
+                "Review: give the listing the Shopify variant's SKU so it matches exactly")
         if r["Price Rule Basis"].startswith("MISMATCH"):
             add("Medium", f"Price follows neither rule: {r['Price Rule Basis']}", "Correct the price rule in the sync app")
         sq = r["Shopify Qty"]
@@ -691,6 +700,11 @@ def build_rows(d, idx):
     return rows
 
 
+def cmp_val(field, v):
+    """Value used for change comparison: eBay returns the shipping policy name only sometimes, so ignore it."""
+    return re.sub(r" \(policy: .*\)$", "", v) if field == "Shipping Cost type" else v
+
+
 def row_key(r):
     return f"{r['Item Number']}|{r['SKU']}|{r['Variation']}"
 
@@ -722,7 +736,7 @@ def main(argv=None):
     print(f"Config: {a.config}")
     cfg = read_config(a.config)
     a.account = choose_account(cfg["ebay"], a.account)
-    stamp = dt.datetime.now().strftime("%Y-%m-%d_%H%M")
+    stamp = dt.datetime.now().strftime("%Y-%m-%d_%H%M%S")
     tag = f"{a.account}_{stamp}"
 
     idx = None
@@ -759,7 +773,7 @@ def main(argv=None):
 
     # ---- change comparison with the previous run of this account
     prev = sorted(p for p in glob.glob(os.path.join(OUT, "snapshot_*.json"))     # this account only, not
-                  if re.fullmatch(re.escape(f"snapshot_{a.account}_") + r"\d{4}-\d{2}-\d{2}_\d{4}\.json",
+                  if re.fullmatch(re.escape(f"snapshot_{a.account}_") + r"\d{4}-\d{2}-\d{2}_\d{4}(\d{2})?\.json",
                                   os.path.basename(p)))                         # accounts sharing a prefix
     changes = []
     if prev:
@@ -768,7 +782,7 @@ def main(argv=None):
             if k not in old:
                 changes.append({"Key": k, "Field": "(listing)", "Old": "", "New": "new since last run"}); continue
             for f, v in cur.items():
-                if old[k].get(f, "") != v:
+                if cmp_val(f, old[k].get(f, "")) != cmp_val(f, v):
                     changes.append({"Key": k, "Field": f, "Old": old[k].get(f, ""), "New": v})
         for k in old:
             if k not in snap and not a.limit:
