@@ -100,7 +100,7 @@ def main():
         if e.code not in (None, 0):
             print(f"\n{e.code}" if isinstance(e.code, str) else f"\nStopped (code {e.code}).")
     except Exception:
-        print("\nSomething went wrong. Copy the text below (never a token or password) and send it to Jeffrey:\n")
+        print("\nSomething went wrong. Copy the text below (never a token or password) and send it to the person who set up the app:\n")
         traceback.print_exc()
     try:
         input("\nPress Enter to close this window.")

@@ -221,7 +221,8 @@ def read_config(path):
     root, stack = {}, [(-1, None)]
     stack[0] = (-1, root)
     for raw in open(path, encoding="utf-8"):
-        line = raw.split(" #")[0].rstrip() if not raw.strip().startswith("#") else ""
+        q = re.match(r"""(\s*[^:#]+:\s*(?:"[^"]*"|'[^']*'))(.*)$""", raw)   # a quoted value may contain " #"
+        line = "" if raw.strip().startswith("#") else (q.group(1) + q.group(2).split(" #")[0] if q else raw.split(" #")[0]).rstrip()
         if not line.strip():
             continue
         ind = len(line) - len(line.lstrip())
@@ -498,10 +499,15 @@ def order_all_columns(rows):
 # ------------------------------------------------------------------ Shopify
 def shopify_products(cfg, refresh):
     cache = os.path.join(OUT, "shopify_cache.json")
-    if not refresh and os.path.exists(cache) and time.time() - os.path.getmtime(cache) < 12 * 3600:
-        print("Shopify: using cache from the last 12 hours (use --refresh-shopify to re-pull)")
-        return json.load(open(cache, encoding="utf-8"))
     shop, token = cfg["store_url"], cfg.get("admin_api_token", "")
+    if not refresh and os.path.exists(cache) and time.time() - os.path.getmtime(cache) < 12 * 3600:
+        try:
+            cached = json.load(open(cache, encoding="utf-8"))
+        except ValueError:
+            cached = None
+        if isinstance(cached, dict) and cached.get("store") == shop:    # only reuse this store's products
+            print("Shopify: using cache from the last 12 hours (use --refresh-shopify to re-pull)")
+            return cached["rows"]
     if not token:
         body = urllib.parse.urlencode({"grant_type": "client_credentials", "client_id": cfg["client_id"],
                                        "client_secret": cfg["client_secret"]}).encode()
@@ -527,7 +533,7 @@ def shopify_products(cfg, refresh):
             break
         after = p["pageInfo"]["endCursor"]
     print()
-    json.dump(rows, open(cache, "w", encoding="utf-8"))
+    json.dump({"store": shop, "rows": rows}, open(cache, "w", encoding="utf-8"))
     return rows
 
 
@@ -695,8 +701,10 @@ def open_file(path):
     try:
         if MAC:
             subprocess.run(["open", path], check=False)
-        else:
+        elif sys.platform == "win32":
             os.startfile(path)
+        else:
+            subprocess.run(["xdg-open", path], check=False)
     except OSError:
         pass
 
@@ -750,7 +758,9 @@ def main(argv=None):
     print()
 
     # ---- change comparison with the previous run of this account
-    prev = sorted(glob.glob(os.path.join(OUT, f"snapshot_{a.account}_*.json")))
+    prev = sorted(p for p in glob.glob(os.path.join(OUT, "snapshot_*.json"))     # this account only, not
+                  if re.fullmatch(re.escape(f"snapshot_{a.account}_") + r"\d{4}-\d{2}-\d{2}_\d{4}\.json",
+                                  os.path.basename(p)))                         # accounts sharing a prefix
     changes = []
     if prev:
         old = json.load(open(prev[-1], encoding="utf-8"))

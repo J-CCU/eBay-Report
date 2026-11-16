@@ -57,8 +57,7 @@ For the full report, audit and Excel workbook, run `python3 ccu_ebay_report.py` 
   - Windows: `CCU eBay Reports.exe`.
   - Mac: build it yourself with `Build Mac eBay App.command` (see below). The Mac program only runs on
     Macs with the same chip type (Apple silicon or Intel) as the Mac that built it.
-- Windows or macOS. On Linux the scripts run from source, but `ccu_ebay_app.py` cannot open the finished
-  CSV (see [Troubleshooting](#troubleshooting)).
+- Windows or macOS. On Linux the scripts run from source; the finished CSV is opened with `xdg-open`.
 - From source: Python 3.10 or newer. Only the standard library is used (`tkinter`, for the file picker in
   `ccu_ebay_app.py`, is optional; without it you type the path). On a Mac with Python from
   python.org, install `certifi` (`python3 -m pip install certifi`) or run Python's
@@ -119,7 +118,8 @@ YAML reader is used (no PyYAML needed), so keep to this format:
 
 - `ebay:` and `shopify:` start at the beginning of the line; nested keys are indented (two spaces).
 - Wrap values in double quotes. Single quotes are not removed and become part of the value.
-- A ` #` (space, then `#`) starts a comment, so a value must not contain one.
+- A ` #` (space, then `#`) after a value starts a comment. A value that itself contains ` #` must be
+  wrapped in quotes.
 
 ### Where config.yaml is looked for
 
@@ -233,7 +233,7 @@ With `--with-id`, `Item Number` is added first.
 | `snapshot_<account>_<stamp>.json` | Values used for the next change comparison (not written with `--limit`). |
 | `errors_<account>_<stamp>.log` | eBay API errors and warnings, if any. |
 | `eBay_Listings_Report_<account>_<stamp>.xlsx` | Sheets: All Fields (every field eBay returns per listing, including item specifics, photos, variations, description text, listing URL), Requested Fields (grouped headings), Problems, Changes. |
-| `shopify_cache.json` | Cached Shopify products (reused for 12 hours). Shared by all accounts and not tied to a store, so use `--refresh-shopify` after switching to a config with a different store. |
+| `shopify_cache.json` | Cached Shopify products (reused for 12 hours). Shared by all accounts; it remembers which store it came from and is downloaded again when the config points at a different store. |
 
 The console also prints counts and the top 10 issue types.
 
@@ -281,7 +281,7 @@ The program appears in `dist\`.
 | Mac says the program cannot be opened | Right-click > Open > Open the first time (it is not signed). |
 | Mac program will not start on another Mac | It was built for a different chip type. Rebuild on that Mac. |
 | Shopify data looks out of date | Run with `--refresh-shopify` (cache lasts 12 hours). |
-| `ccu_ebay_app.py` on Linux shows "Something went wrong" with `AttributeError: ... 'startfile'` | The report was written; only opening it failed. Open the CSV from `ccu_report_output/` yourself. |
+| The CSV is written but does not open (e.g. on Linux without `xdg-open`) | The report was written; only opening it failed. Open the CSV from `ccu_report_output/` yourself. |
 | `Listings that could not be read: N` | Those `GetItem` calls failed; see the console (or `errors_*.log` for the full report). |
 
 If the packaged program shows "Something went wrong", copy the error text (never a token or password)

@@ -2,7 +2,7 @@
 Requested-fields report (READ-ONLY: never edits eBay or Shopify)
 
 Outputs one CSV with ONLY the requested fields, named and ordered exactly as requested.
-One row per listing (multi-condition listings get one row per condition).
+One row per listing (multi-variation listings get one row per variation).
 
 Run:
     python requested_fields_report.py                   # asks which account when config.yaml has more than one
