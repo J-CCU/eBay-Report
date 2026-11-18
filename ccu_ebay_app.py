@@ -9,7 +9,7 @@ chosen, else one next to the program / in Downloads / Documents); press Enter to
 The choice is remembered in ccu_ebay_settings.json next to the program (only the file's location, never its contents).
 The CSV is saved in a "ccu_report_output" folder next to the program.
 
-Build:  "Build Windows eBay App.bat" (on Windows)  /  "Build Mac eBay App.command" (on a Mac)
+Build:  see "Building the app" in README.md (PyInstaller, one file).
 Run from source:  python ccu_ebay_app.py
 """
 import json, os, sys, traceback

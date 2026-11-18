@@ -28,8 +28,6 @@ For the full report, audit and Excel workbook, run `python3 ccu_ebay_report.py` 
 | `ccu_ebay_app.py` | Entry point for the packaged program. Picks `config.yaml`, runs the requested-fields report and opens the CSV. |
 | `requested_fields_report.py` | Builds the requested-fields CSV (only the requested columns, in the requested order). |
 | `ccu_ebay_report.py` | Full listing report and buyer-block audit (CSVs, Excel workbook, change tracking). Also the shared eBay/Shopify connection code used by the other two scripts. |
-| `Build Mac eBay App.command` | Builds the Mac program from the three `.py` files. |
-| `CCU eBay Reports - Mac build kit.zip` | The same three scripts plus the build script, zipped for copying to a Mac. |
 
 ## Features
 
@@ -246,18 +244,19 @@ The console also prints counts and the top 10 issue types.
 
 ### Mac
 
-1. Put `Build Mac eBay App.command` in the same folder as `ccu_ebay_app.py`, `ccu_ebay_report.py` and
-   `requested_fields_report.py` (or unzip `CCU eBay Reports - Mac build kit.zip`).
-2. Double-click `Build Mac eBay App.command`, or run `bash "Build Mac eBay App.command"`.
+Needs Python 3.10+ from python.org. In Terminal, in the folder with the three `.py` files, run:
 
-The script:
+```
+python3 -m venv /tmp/ebay-build
+/tmp/ebay-build/bin/python -m pip install pyinstaller certifi
+/tmp/ebay-build/bin/python -m PyInstaller --noconfirm --onefile --console --name "CCU eBay Reports" \
+  --hidden-import certifi ccu_ebay_app.py
+```
 
-- finds Python 3.10+ (python.org framework install, Homebrew, `/usr/local/bin`, or `python3` on PATH)
-- creates a throwaway virtual environment and installs PyInstaller and certifi from PyPI
-- runs PyInstaller (`--onefile --console`, certifi as a hidden import) on `ccu_ebay_app.py`
-- puts the single-file program `CCU eBay Reports` next to the scripts and reveals it in Finder
-
-It takes 1 to 2 minutes. `config.yaml` is not included in the build.
+The single-file program `CCU eBay Reports` appears in `dist/`. It takes 1 to 2 minutes, runs only on Macs
+with the same chip type, and `config.yaml` is not included in the build. On another Mac, open it the first
+time with right-click > Open (it is not signed by Apple). Delete `build/`, `dist/`, the `.spec` file and
+`/tmp/ebay-build` afterwards if you like.
 
 ### Windows
 
